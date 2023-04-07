@@ -1,8 +1,8 @@
-name: Jira Find issue key
+name: Jira Find multiple issue keys
 description: Find an issue inside event
 branding:
-  icon: 'book-open'
-  color: 'blue'
+  icon: "book-open"
+  color: "blue"
 inputs:
   string:
     description: Provide a string to extract issue key from
@@ -12,8 +12,8 @@ inputs:
     required: false
     default: commits
 outputs:
-  issue:
-    description: Key of the found issue
+  issueList:
+    description: List of the found issues
 runs:
-  using: 'node16'
-  main: './dist/index.js'
+  using: "node16"
+  main: "./dist/index.js"

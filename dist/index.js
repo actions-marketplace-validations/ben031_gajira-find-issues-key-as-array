@@ -4,6 +4,7 @@ require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /***/ 4582:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
+<<<<<<< Updated upstream
 const _ = __nccwpck_require__(250)
 const Jira = __nccwpck_require__(5557)
 
@@ -344,6 +345,352 @@ function escapeProperty(s) {
 /***/ 2186:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
+=======
+const _ = __nccwpck_require__(250);
+const Jira = __nccwpck_require__(5557);
+
+const issueIdRegEx = /([a-zA-Z0-9]+-[0-9]+)/g;
+
+const eventTemplates = {
+	branch: "{{event.ref}}",
+	commits: "{{event.commits.map(c=>c.message).join(' ')}}",
+};
+
+module.exports = class {
+	constructor({ githubEvent, argv, config }) {
+		this.Jira = new Jira({
+			baseUrl: config.baseUrl,
+			token: config.token,
+			email: config.email,
+		});
+
+		this.config = config;
+		this.argv = argv;
+		this.githubEvent = githubEvent;
+	}
+
+	async execute() {
+		if (this.argv.string) {
+			const foundIssue = await this.findIssueKeyIn(this.argv.string);
+
+			if (foundIssue) return foundIssue;
+		}
+
+		if (this.argv.from) {
+			const template = eventTemplates[this.argv.from];
+
+			if (template) {
+				const searchStr = this.preprocessString(template);
+				const foundIssue = await this.findIssueKeyIn(searchStr);
+
+				if (foundIssue) return foundIssue;
+			}
+		}
+	}
+
+	async findIssueKeyIn(searchStr) {
+		const match = searchStr.match(issueIdRegEx);
+
+		console.log(`Searching in string: \n ${searchStr}`);
+
+		// if (!match) {
+		// 	console.log(`String does not contain issueKeys`);
+
+		// 	return;
+		// }
+
+		const issueList = [];
+
+		for (const issueKey of match) {
+			const issue = await this.Jira.getIssue(issueKey);
+
+			if (issue) {
+				issueList.push(issue);
+			}
+		}
+
+		return { issueList };
+	}
+
+	preprocessString(str) {
+		_.templateSettings.interpolate = /{{([\s\S]+?)}}/g;
+		const tmpl = _.template(str);
+
+		return tmpl({ event: this.githubEvent });
+	}
+};
+
+
+/***/ }),
+
+/***/ 5557:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const { get } = __nccwpck_require__(250)
+
+const serviceName = 'jira'
+const { format } = __nccwpck_require__(7310)
+const client = __nccwpck_require__(6321)(serviceName)
+
+class Jira {
+  constructor ({ baseUrl, token, email }) {
+    this.baseUrl = baseUrl
+    this.token = token
+    this.email = email
+  }
+
+  async createIssue (body) {
+    return this.fetch('createIssue',
+      { pathname: '/rest/api/2/issue' },
+      { method: 'POST', body })
+  }
+
+  async getIssue (issueId, query = {}) {
+    const { fields = [], expand = [] } = query
+
+    try {
+      const res = await this.fetch('getIssue', {
+        pathname: `/rest/api/2/issue/${issueId}`,
+        query: {
+          fields: fields.join(','),
+          expand: expand.join(','),
+        },
+      })
+
+      return res
+    } catch (error) {
+      if (get(error, 'res.status') === 404) {
+        return
+      }
+
+      throw error
+    }
+  }
+
+  async getIssueTransitions (issueId) {
+    return this.fetch('getIssueTransitions', {
+      pathname: `/rest/api/2/issue/${issueId}/transitions`,
+    }, {
+      method: 'GET',
+    })
+  }
+
+  async transitionIssue (issueId, data) {
+    return this.fetch('transitionIssue', {
+      pathname: `/rest/api/3/issue/${issueId}/transitions`,
+    }, {
+      method: 'POST',
+      body: data,
+    })
+  }
+
+  async fetch (apiMethodName,
+    { host, pathname, query },
+    { method, body, headers = {} } = {}) {
+    const url = format({
+      host: host || this.baseUrl,
+      pathname,
+      query,
+    })
+
+    if (!method) {
+      method = 'GET'
+    }
+
+    if (headers['Content-Type'] === undefined) {
+      headers['Content-Type'] = 'application/json'
+    }
+
+    if (headers.Authorization === undefined) {
+      headers.Authorization = `Basic ${Buffer.from(`${this.email}:${this.token}`).toString('base64')}`
+    }
+
+    // strong check for undefined
+    // cause body variable can be 'false' boolean value
+    if (body && headers['Content-Type'] === 'application/json') {
+      body = JSON.stringify(body)
+    }
+
+    const state = {
+      req: {
+        method,
+        headers,
+        body,
+        url,
+      },
+    }
+
+    try {
+      await client(state, `${serviceName}:${apiMethodName}`)
+    } catch (error) {
+      const fields = {
+        originError: error,
+        source: 'jira',
+      }
+
+      delete state.req.headers
+
+      throw Object.assign(
+        new Error('Jira API error'),
+        state,
+        fields
+      )
+    }
+
+    return state.res.body
+  }
+}
+
+module.exports = Jira
+
+
+/***/ }),
+
+/***/ 6321:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const fetch = __nccwpck_require__(467)
+// const moment = require('moment')
+
+module.exports = serviceName => async (state, apiMethod = 'unknown') => {
+  // const startTime = moment.now()
+
+  const response = await fetch(state.req.url, state.req)
+
+  state.res = {
+    headers: response.headers.raw(),
+    status: response.status,
+  }
+
+  // const totalTime = moment.now() - startTime
+  // const tags = {
+  //   api_method: apiMethod,
+  //   method: state.req.method || 'GET',
+  //   response_code: response.status,
+  //   service: serviceName,
+  // }
+
+  state.res.body = await response.text()
+
+  const isJSON = (response.headers.get('content-type') || '').includes('application/json')
+
+  if (isJSON && state.res.body) {
+    state.res.body = JSON.parse(state.res.body)
+  }
+
+  if (!response.ok) {
+    throw new Error(response.statusText)
+  }
+
+  return state
+}
+
+
+/***/ }),
+
+/***/ 7351:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.issue = exports.issueCommand = void 0;
+const os = __importStar(__nccwpck_require__(2037));
+const utils_1 = __nccwpck_require__(5278);
+/**
+ * Commands
+ *
+ * Command Format:
+ *   ::name key=value,key=value::message
+ *
+ * Examples:
+ *   ::warning::This is the message
+ *   ::set-env name=MY_VAR::some value
+ */
+function issueCommand(command, properties, message) {
+    const cmd = new Command(command, properties, message);
+    process.stdout.write(cmd.toString() + os.EOL);
+}
+exports.issueCommand = issueCommand;
+function issue(name, message = '') {
+    issueCommand(name, {}, message);
+}
+exports.issue = issue;
+const CMD_STRING = '::';
+class Command {
+    constructor(command, properties, message) {
+        if (!command) {
+            command = 'missing.command';
+        }
+        this.command = command;
+        this.properties = properties;
+        this.message = message;
+    }
+    toString() {
+        let cmdStr = CMD_STRING + this.command;
+        if (this.properties && Object.keys(this.properties).length > 0) {
+            cmdStr += ' ';
+            let first = true;
+            for (const key in this.properties) {
+                if (this.properties.hasOwnProperty(key)) {
+                    const val = this.properties[key];
+                    if (val) {
+                        if (first) {
+                            first = false;
+                        }
+                        else {
+                            cmdStr += ',';
+                        }
+                        cmdStr += `${key}=${escapeProperty(val)}`;
+                    }
+                }
+            }
+        }
+        cmdStr += `${CMD_STRING}${escapeData(this.message)}`;
+        return cmdStr;
+    }
+}
+function escapeData(s) {
+    return utils_1.toCommandValue(s)
+        .replace(/%/g, '%25')
+        .replace(/\r/g, '%0D')
+        .replace(/\n/g, '%0A');
+}
+function escapeProperty(s) {
+    return utils_1.toCommandValue(s)
+        .replace(/%/g, '%25')
+        .replace(/\r/g, '%0D')
+        .replace(/\n/g, '%0A')
+        .replace(/:/g, '%3A')
+        .replace(/,/g, '%2C');
+}
+//# sourceMappingURL=command.js.map
+
+/***/ }),
+
+/***/ 2186:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+>>>>>>> Stashed changes
 "use strict";
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {

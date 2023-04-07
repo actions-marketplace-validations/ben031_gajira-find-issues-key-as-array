@@ -12,7 +12,7 @@ To find an issue key inside github event (branch):
 
 ```yaml
 - name: Find in commit messages
-  uses: ben031/gajira-find-issues-key-as-array@v1.0.0
+  uses: ben031/gajira-find-issues-key-as-array@v1.0.1
   with:
     string: ${{ github.event.ref }}
 ```
@@ -21,7 +21,7 @@ Or do the same using shortcut `from`:
 
 ```yaml
 - name: Find in commit messages
-  uses: ben031/gajira-find-issues-key-as-array@v1.0.0
+  uses: ben031/gajira-find-issues-key-as-array@v1.0.1
   with:
     from: branch
 ```
@@ -30,7 +30,7 @@ To find an issue key inside commit messages:
 
 ```yaml
 - name: Find in commit messages
-  uses: ben031/gajira-find-issues-key-as-array@v1.0.0
+  uses: ben031/gajira-find-issues-key-as-array@v1.0.1
   with:
     from: commits
 ```

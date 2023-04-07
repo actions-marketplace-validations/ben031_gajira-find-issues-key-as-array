@@ -1,4 +1,4 @@
-name: Jira Find multiple issue keys
+name: Jira Find issue key List
 description: Find an issue inside event
 branding:
   icon: "book-open"

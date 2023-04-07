@@ -70,7 +70,7 @@ require("./sourcemap-register.js");
 						}
 					}
 
-					return { issueArray: issueList };
+					return { issueList };
 				}
 
 				preprocessString(str) {

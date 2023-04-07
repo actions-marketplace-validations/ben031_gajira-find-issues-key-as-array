@@ -54,12 +54,6 @@ require("./sourcemap-register.js");
 
 					console.log(`Searching in string: \n ${searchStr}`);
 
-					if (!match) {
-						console.log(`String does not contain issueKeys`);
-
-						return;
-					}
-
 					const issueList = [];
 
 					for (const issueKey of match) {
